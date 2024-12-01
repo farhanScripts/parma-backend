@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class UpdateCategoryRequest extends FormRequest
 {
@@ -11,7 +12,7 @@ class UpdateCategoryRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +23,16 @@ class UpdateCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => 'sometimes|string|max:255',
+            'icon' => 'sometimes|image|mimes:jpg,svg,png'
         ];
+    }
+
+    public function failedValidation(\Illuminate\Contracts\Validation\Validator $validator){
+        throw new HttpResponseException(response()->json([
+            'success' => false,
+            'message' => 'Validation Errors!',
+            'data' => $validator->errors()
+        ]));
     }
 }
