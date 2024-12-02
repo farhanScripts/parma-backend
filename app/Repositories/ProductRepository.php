@@ -19,12 +19,12 @@ class ProductRepository implements ProductRepositoryInterface
         return Product::all();
     }
     public function getById($id) {
-
+        return Product::findOrFail($id);
     }
     public function store(array $data) {
-
+        return Product::create($data);
     }
-    public function update(array $data,$id) {
+    public function update(array $data, $id) {
 
     }
     public function delete($id) {

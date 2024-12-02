@@ -2,18 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Models\Product;
+use Illuminate\Support\Str;
+use App\Classes\ApiResponseClass;
+use Illuminate\Support\Facades\DB;
+use App\Http\Resources\ProductResource;
+use App\Repositories\CategoryRepository;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use App\Interfaces\ProductRepositoryInterface;
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+    private ProductRepositoryInterface $productRepositoryInterface;
+
+    public function __construct(ProductRepositoryInterface $productRepositoryInterface) {
+        $this->productRepositoryInterface = $productRepositoryInterface;
+    }
     public function index()
     {
-        //
+        $products = $this->productRepositoryInterface->index();
+        return ApiResponseClass::sendResponse(ProductResource::collection($products), "Get products success!", 200);
     }
 
     /**
@@ -29,7 +42,38 @@ class ProductController extends Controller
      */
     public function store(StoreProductRequest $request)
     {
-        //
+        $categoryId = (int) $request->category_id;
+
+        $categoryRepo = new CategoryRepository();
+        $category = $categoryRepo->getById($categoryId); 
+            
+        if(!$category) { //validasi
+            return ApiResponseClass::errorResponse("Category not found", 400);
+        }
+
+        try {
+            $photoPath = $request->file('photo')->store('product_photo', 'public');
+            
+            $reqBody = [
+                'name' => $request->name,
+                'slug' => Str::slug($request->name),
+                'photo' => $photoPath,
+                'about' => $request->about,
+                'price' => $request->price,
+                'category_id' => $categoryId,
+            ];
+
+            DB::beginTransaction();
+
+            $product = $this->productRepositoryInterface->store($reqBody);
+
+            DB::commit();
+
+            return ApiResponseClass::sendResponse(new ProductResource($product), 'Product created!', 201);
+        
+        } catch (Exception $ex) {
+            return ApiResponseClass::rollback($ex);
+        }
     }
 
     /**
